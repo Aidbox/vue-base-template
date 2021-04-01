@@ -1,11 +1,18 @@
 <template>
   <div>
     <h3>Patients</h3>
-    <ul>
+    <div v-if="patients.length === 0">There is no patients yet. Add some!</div>
+    <ul v-else>
       <li v-for="patient in patients" :key="patient.id">
-        <a href="javascript:void(0)">{{ patient.resource.id }}</a>
+        <span>{{ patient | name }}</span>
+        [<a
+          href="javascript:void(0)"
+          @click.prevent="onClickPatientDelete(patient)"
+          >x</a
+        >]
       </li>
     </ul>
+    <button type="button" @click="onAddPatientClick">Add patient</button>
   </div>
 </template>
 
@@ -18,6 +25,13 @@ export default {
       patients: [],
     };
   },
+  filters: {
+    name(patient) {
+      if (patient.resource.name) {
+        return patient.resource.name[0].text;
+      }
+    },
+  },
   mounted() {
     this.fetchPatients();
   },
@@ -25,6 +39,25 @@ export default {
     async fetchPatients() {
       const patientsData = await this.aidbox.request("/Patient");
       this.patients = patientsData.data.entry;
+    },
+    onAddPatientClick() {
+      const name = window.prompt("Enter patient name");
+      if (!name) {
+        return;
+      }
+      this.addPatient(name);
+    },
+    async addPatient(name) {
+      await this.aidbox.request("/Patient", {
+        data: { name: [{ text: name }] },
+      });
+      this.fetchPatients();
+    },
+    async onClickPatientDelete(patient) {
+      await this.aidbox.request(`/Patient/${patient.resource.id}`, {
+        method: "DELETE",
+      });
+      this.fetchPatients();
     },
   },
 };

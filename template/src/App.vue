@@ -1,61 +1,62 @@
 <template>
   <div id="app">
-    <div v-if="error">Error: {{ error }}</div>
+    <div v-if="error" class="error">Error: {{ error }}</div>
     <div v-if="userInfo">
-      <div>
-        Logged in as <b>{{ userInfo.id }}</b>
-      </div>
+      <UserInfo :userInfo="userInfo" @logout="setUserInfo(null)" />
       <Patients />
+    </div>
+    <div v-else-if="ready">
+      <Login @success="setUserInfo" @error="setError" />
     </div>
   </div>
 </template>
 
 <script>
 import Patients from "./components/Patients";
+import Login from "./components/Login";
+import UserInfo from "./components/UserInfo";
 
 export default {
   name: "App",
   inject: ["aidbox"],
   components: {
+    Login,
+    UserInfo,
     Patients,
   },
   data() {
     return {
       error: null,
       userInfo: null,
+      ready: false,
     };
   },
   mounted() {
-    this.getUserInfo();
+    this.fetchUserInfo();
   },
   methods: {
-    async getUserInfo() {
+    setUserInfo(userInfo) {
+      this.setError(null);
+      this.userInfo = userInfo;
+    },
+    setError(error) {
+      this.error = error;
+    },
+
+    async fetchUserInfo() {
       const res = await this.aidbox.getUserInfo();
 
       if (res.status === 200) {
-        this.error = null;
-        this.userInfo = res.data;
+        this.setUserInfo(res.data);
       } else if (res.status === 0) {
-        this.error = "Aidbox server is unreachable.";
-      } else {
-        this.authorize();
+        this.setError("Aidbox server is unreachable.");
       }
-    },
-    async authorize() {
-      const res = await this.aidbox.authorize({
-        username: "admin",
-        password: "secret",
-      });
-
-      if (res.status === 200) {
-        this.error = null;
-        this.userInfo = res.data.userinfo;
-      } else {
-        this.error = res.data.error_description || res.data.error;
-      }
+      this.ready = true;
     },
   },
 };
 </script>
 
-<style></style>
+<style>
+@import "main.css";
+</style>
